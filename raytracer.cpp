@@ -1,10 +1,4 @@
-inline DirLight DIRLIGHT(Vec3 dir, Vec3 color)
-{
-    DirLight result;
-    result.dir = dir;
-    result.color = color;
-    return result;
-}
+#include "raytracer.h"
 
 inline Material MATERIAL(Vec3 diffuse, Vec3 specular, Vec3 reflection, float shine)
 {
@@ -26,28 +20,34 @@ inline Ray RAY(Vec3 o, Vec3 d)
 
 bool WorldHitGeometry(Ray ray, Hit *hit)
 {
-    Material mat1 = MATERIAL(VEC3(0.2f, 0.2f, 0.2f), 
-			     VEC3(0.1f, 0.1f, 0.1f), 
-			     VEC3(0.8f, 0.8f, 0.8f), 
+    Material mat1 = MATERIAL(VEC3(0.5f, 0.2f, 0.2f), 
+			     VEC3(0.8f, 0.2f, 0.1f), 
+			     VEC3(0.2f, 0.2f, 0.2f), 
 			     6.0f);
-    Material mat2 = MATERIAL(VEC3(1.0f, 1.0f, 0.0f), 
-			     VEC3(0, 0, 0), 
-			     VEC3(0, 0, 0), 
+    Material mat2 = MATERIAL(VEC3(0.2f, 0.8f, 0.0f), 
+			     VEC3(0.3f, 0.3f, 0.3f), 
+			     VEC3(0.1f, 0.1f, 0.1f), 
 			     15.0f);
     Material mat3 = MATERIAL(VEC3(0.0f, 0.0f, 1.0f), 
 			     VEC3(0.6f, 0.6f, 0.6f), 
-			     VEC3(1, 1, 1), 
+			     VEC3(0.5f, 0.5f, 0.5f), 
 			     15.0f);
     Sphere spheres[] = {
 	SPHERE(VEC3(-1.0f, 0, -3.0f), 0.5f, mat2),
 	SPHERE(VEC3(1.0f, 0, -3.0f), 0.5f, mat1)
     };
-    Plane plane1 = PLANE(VEC3(0,-1,0), VEC3(0,1,0), mat3);
+    Plane planes[] = {
+	// PLANE(VEC3(-3, 0, 0), VEC3(1,0,0), mat3),
+	// PLANE(VEC3(3, 0, 0), VEC3(-1,0,0), mat3),
+	PLANE(VEC3(0, -1.5f, 0), VEC3(0,1,0), mat3),
+	// PLANE(VEC3(0, 1.5f, 0), VEC3(0,-1,0), mat3),
+	// PLANE(VEC3(0, 0, -6), VEC3(0, 0, 1), mat3),
+    };
 
     bool isHit = false;
-
     Hit nextHit;
     Hit closestHit;
+
     for(int i = 0; i < ARRAY_SIZE(spheres); i++) {
     	if(SphereHit(spheres[i], ray, &nextHit)) {
 	    if(!isHit) {
@@ -60,96 +60,58 @@ bool WorldHitGeometry(Ray ray, Hit *hit)
     	}
     }
 
-    if(PlaneHit(plane1, ray, &nextHit)) {
-    	if(isHit) {
-    	    if(nextHit.t < closestHit.t) {
+    for (int i = 0; i < ARRAY_SIZE(planes); ++i) {
+	if(PlaneHit(planes[i], ray, &nextHit)) {
+	    if(!isHit) {
+		isHit = true;
+    		closestHit = nextHit;
+	    }
+    	    else if(nextHit.t < closestHit.t) {
     		closestHit = nextHit;
     	    }
-    	}
-    	else {
-	    isHit = true;
-    	    closestHit = nextHit;
-    	}
+	}
     }
 
     *hit = closestHit;
-    
     return isHit;
 }
 
 Vec3 WorldHit(Ray ray, bool nolight, int n)
 {
     n++;
-
     Vec3 bgCol = VEC3(0,0,0);
     Vec3 ambient = VEC3(0.2f, 0.2f, 0.2f);
-    DirLight light = DIRLIGHT(VEC3(0.2f,-0.5f,-0.5f), VEC3(1,1,1));
-
-    // bool isHit = false;
-    // Hit closestHit;
-    // Hit hit;
-
-    // for(int i = 0; i < ARRAY_SIZE(spheres); i++) {
-    // 	if(SphereHit(spheres[i], ray, &hit)) {
-    // 	    isHit = true;
-    // 	    if(i == 0) {
-    // 		closestHit = hit;
-    // 	    }
-    // 	    else if(hit.t < closestHit.t) {
-    // 		closestHit = hit;
-    // 	    }
-    // 	}
-    // }
-
-    // if(PlaneHit(plane1, ray, &hit)) {
-    // 	if(isHit) {
-    // 	    if(hit.t < closestHit.t) {
-    // 		closestHit = hit;
-    // 	    }
-    // 	}
-    // 	else {
-    // 	    isHit = true;
-    // 	    closestHit = hit;
-    // 	}
-    // }
+    
+    DirLight light = DIRLIGHT(VEC3(0.2f,-1.0f,-0.2f), VEC3(0.3f, 0.3f, 0));
+    
+    PointLight pointLight = POINTLIGHT(VEC3(2.0f, 0.5f, -2.0f), 
+				       VEC3(0.7f, 0.7f, 0.7f));
     
     Hit hit;
-    bool isHit = WorldHitGeometry(ray, &hit);
-
-    if(isHit) {
+    if(WorldHitGeometry(ray, &hit)) {
 	if(nolight)
 	    return hit.mat.diffuse;
 	
 	Vec3 p = ray.o + (ray.d * hit.t);
 
-
+	Vec3 result = hit.mat.diffuse * ambient;
+	if(PointLightIlluminates(pointLight, p)) {
+	    result += LightGetColor(Norm(light.dir * -1), light.color, hit);
+	    Vec3 pointFrom = Norm(pointLight.pos - p);
+	    result += LightGetColor(pointFrom, pointLight.color, hit);
+	}
 	
-	Vec3 finalColor = hit.mat.diffuse * ambient;
-	Vec3 col = hit.mat.diffuse * light.color;
-	Vec3 l = Norm(light.dir * -1);
-	float nl = Dot(hit.normal, l);
-	col = col * MAX(0.0f, nl);
-	
-	Vec3 col2 = hit.mat.specular * light.color;
-	Vec3 e = Norm(ray.o - p);
-	Vec3 rl = Reflect(l, hit.normal);
-	float rle = Dot(e, rl);
-	col2 *= pow(MAX(0.0f, rle), hit.mat.shine);
-	
-
-	finalColor += col + col2;
-
-	if(n < 100) {
-	    Vec3 reflectionDir = Norm(Reflect(ray.o - p, hit.normal));
+	if(n < 10) {
+	    Vec3 reflectionDir = Norm(Reflect(hit.ray.o - p, hit.normal));
 	    Vec3 adjustedP = p + (reflectionDir * EPSILON);
 	    Ray reflectionRay;
 	    reflectionRay.o = adjustedP;
 	    reflectionRay.d = reflectionDir;
-	    finalColor += hit.mat.reflection * WorldHit(reflectionRay, false, n);
+	    result += hit.mat.reflection * WorldHit(reflectionRay, false, n);
 	}
 
-	return finalColor;
+	return result;
     }
 
     return bgCol;
-};
+}

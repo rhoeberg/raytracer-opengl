@@ -19,6 +19,7 @@
 // #include "geometry.h"
 // #include "raytracer.h"
 
+#include "light.cpp"
 #include "camera.cpp"
 #include "math.cpp"
 #include "geometry.cpp"
