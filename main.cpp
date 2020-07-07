@@ -5,7 +5,7 @@
 #define ARRAY_SIZE(a) sizeof(a) / sizeof(a[0])
 
 #define MOUSE_SENSITIVITY 0.1
-#define EPSILON 0.00001
+#define EPSILON 0.0001
 
 // GLM Mathematics
 // #include "glm/glm.hpp"
@@ -14,7 +14,14 @@
 
 #include <iostream>
 
+#include "math.h"
+#include "camera.h"
+// #include "geometry.h"
+// #include "raytracer.h"
+
+#include "camera.cpp"
 #include "math.cpp"
+#include "geometry.cpp"
 #include "raytracer.cpp"
 
 const int SCREEN_WIDTH = 800, SCREEN_HEIGHT = 600;
@@ -32,6 +39,7 @@ static Camera cam;
 
 static bool moving = false;
 static bool movedLastFrame = true;
+float moveStartTimer = 0.0f;
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
@@ -49,6 +57,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 {
     moving = true;
+    moveStartTimer = glfwGetTime();
     // mouseX = xpos;
     // mouseY = ypos;
     if (firstMouse)
@@ -232,7 +241,7 @@ int main(int argc, char *argv[])
 
     Vec3 data[480000];
     for(int i = 0; i < 480000; i++) {
-	data[i] = vec3(0,0,0);
+	data[i] = VEC3(0,0,0);
     }
     
     // int i = 0;
@@ -257,33 +266,43 @@ int main(int argc, char *argv[])
     glBindTexture(GL_TEXTURE_2D, 0);
     glActiveTexture(GL_TEXTURE0);
     
-    cam = camera(vec3(0,0,0), vec3(0,0,-1), vec3(0,1,0), 0.785);
+    cam = CAMERA(VEC3(0,0,0), VEC3(0,0,-1), VEC3(0,1,0), 0.785);
     camPitch = asin(cam.g.y);
     camYaw = atan2(cam.g.x, cam.g.z);
     
     glfwSetInputMode(win, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     
 
+    float moveDuration = 0.5f;
+    float moveStartTime = 0.0f;
     while(!glfwWindowShouldClose(win)) {
-	moving = false;
+
+	if(glfwGetTime() > moveStartTimer + moveDuration) {
+	    moving = false;
+	}
+
         glfwPollEvents();
 	
 	
 	if(keys[GLFW_KEY_A]) {
 	    cam.e += cam.u * 0.1f;
 	    moving = true;
+	    moveStartTimer = glfwGetTime();
 	}
 	else if(keys[GLFW_KEY_D]) {
 	    cam.e -= cam.u * 0.1f;
 	    moving = true;
+	    moveStartTimer = glfwGetTime();
 	}
 	else if(keys[GLFW_KEY_W]) {
 	    cam.e += cam.g * 0.1f;
 	    moving = true;
+	    moveStartTimer = glfwGetTime();
 	}
 	else if(keys[GLFW_KEY_S]) {
 	    cam.e -= cam.g * 0.1f;
 	    moving = true;
+	    moveStartTimer = glfwGetTime();
 	}
         
 	int i = 0;
@@ -296,7 +315,7 @@ int main(int argc, char *argv[])
 			data[i] = WorldHit(ray, true);
 		    }
 		    else {
-			data[i] = vec3(0,0,0);
+			data[i] = VEC3(0,0,0);
 		    }
 		}
 		else {

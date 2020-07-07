@@ -1,17 +1,8 @@
-struct Camera
-{
-    Vec3 e;
-    Vec3 g;
-    Vec3 t;
-    
-    Vec3 w;
-    Vec3 u;
-    Vec3 v;
-    
-    float angle;
-};
+#include "camera.h"
+#include "raytracer.h"
+#include <math.h>
 
-inline Camera camera(Vec3 e, Vec3 g, Vec3 t, float angle)
+inline Camera CAMERA(Vec3 e, Vec3 g, Vec3 t, float angle)
 {
     Camera result;
     result.e = e;
@@ -33,6 +24,6 @@ Ray RayFor(Camera cam, int w, int h, int x, int y)
     Vec3 rv = cam.v * (y - (h - 1) / 2);
     Vec3 r = rw + ru + rv;
     Vec3 d = Norm(r);
-    Ray result = ray(o, d);
+    Ray result = RAY(o, d);
     return result;
 }
