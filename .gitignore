@@ -1,2 +1,5 @@
+build
+.vs
+.visual
 test
 **.dSYM**
